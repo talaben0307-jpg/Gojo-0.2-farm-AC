@@ -1,1 +1,312 @@
+-- ==========================================
+-- 1. BYPASS ANTI-CHEAT LOOP SYSTEM (Tự động thử nghiệm đến khi thành công)
+-- ==========================================
+local function RunBypassAC()
+    task.spawn(function()
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        local isBypassed = false
+        local attempts = 0
+        
+        print("[CPZ Anti-Cheat] Bắt đầu quy trình Bypass AC...")
+        
+        while not isBypassed and attempts < 5 do
+            attempts = attempts + 1
+            local character = player.Character or player.CharacterAdded:Wait()
+            local hrp = character:WaitForChild("HumanoidRootPart")
+            local humanoid = character:WaitForChild("Humanoid")
+            
+            -- Dịch chuyển tạm ra ngoài map để tránh va chạm ban đầu
+            pcall(function()
+                hrp.CFrame = CFrame.new(0, 999999, 0)
+            end)
+            task.wait(0.4)
+            
+            -- Thử nghiệm Hook Metatable chặn Remote báo cáo vị trí/tốc độ
+            local success = pcall(function()
+                local mt = getrawmetatable(game)
+                local old = mt.__namecall
+                setreadonly(mt, false)
+                
+                mt.__namecall = newcclosure(function(self, ...)
+                    local method = getnamecallmethod()
+                    if method == "FireServer" then
+                        local name = tostring(self):lower()
+                        if name:find("anticheat") or name:find("check") or name:find("teleport") or name:find("speed") then
+                            return -- Chặn gói tin phát hiện
+                        end
+                    end
+                    return old(self, ...)
+                end)
+                setreadonly(mt, true)
+            end)
+            
+            if success then
+                isBypassed = true
+                pcall(function()
+                    hrp.CFrame = CFrame.new(0, 50, 0) -- Trả về vị trí an toàn
+                end)
+                print("[CPZ Anti-Cheat] 🚀 Bypassed Successfully! AC đã bị vô hiệu hóa.")
+            else
+                -- Nếu chưa thành công, ép nhân vật chết để vòng lặp làm mới (Respawn)
+                pcall(function()
+                    humanoid.Health = 0
+                end)
+                player.CharacterAdded:Wait()
+                task.wait(1.5)
+            end
+        end
+        
+        if not isBypassed then
+            print("[CPZ Anti-Cheat] ⚠️ Đã quá số lần thử, vui lòng kiểm tra lại Executor!")
+        end
+    end)
+end
 
+-- Tải Menu gốc CPZ của cậu
+local CPZMenu = loadstring(game:HttpGet("https://raw.githubusercontent.com/talaben0307-jpg/cpzmenu/refs/heads/main/menu"))()
+
+-- Tạo Window Cyberpunk
+local Window = CPZMenu:CreateWindow({
+    Title = "Steal An Egg & Gojo Ultimate Hub",
+    SubTitle = "⚡ CPZ Edition | by Phong"
+})
+
+-- Hàm dịch chuyển nhặt trứng mượt mà
+local function AutoFarmTarget(targetName, isSpecial)
+    pcall(function()
+        local folder = workspace:FindFirstChild("Eggs") or workspace:FindFirstChild("Biomes") or workspace
+        for _, obj in pairs(folder:GetDescendants()) do
+            if obj:IsA("Model") and (obj.Name:lower():find(targetName:lower()) or (isSpecial and obj:FindFirstChild("Special"))) then
+                if obj.PrimaryPart and game.Players.LocalPlayer.Character then
+                    local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+                    local tweenService = game:GetService("TweenService")
+                    local info = TweenInfo.new(0.15, Enum.EasingStyle.Linear)
+                    local tween = tweenService:Create(hrp, info, {CFrame = obj.PrimaryPart.CFrame})
+                    tween:Play()
+                    task.wait(0.2)
+                end
+            end
+        end
+    end)
+end
+
+-- ==========================================
+-- KHỞI TẠO CÁC TAB
+-- ==========================================
+local Tabs = {
+    Gojo = Window:AddTab({ Title = "Gojo 0.2s Farm" }),
+    Biomes1 = Window:AddTab({ Title = "Biomes [1-5]" }),
+    Biomes2 = Window:AddTab({ Title = "Biomes [6-10]" }),
+    Biomes3 = Window:AddTab({ Title = "Biomes [11-13]" }),
+    Special = Window:AddTab({ Title = "Special & All" }),
+    Misc = Window:AddTab({ Title = "Misc & ESP" })
+}
+
+-- ==========================================
+-- 1. TAB: GOJO 0.2S FARM (Teleport sát dưới chân + Theo dõi Respawn)
+-- ==========================================
+Tabs.Gojo:AddSection("Infinite Gojo 0.2s Farm")
+
+local gojoFarmActive = false
+
+Tabs.Gojo:AddButton({
+    Title = "⚡ Bật / Tắt Gojo 0.2s Farm (Teleport Dưới Chân)",
+    Callback = function()
+        gojoFarmActive = not gojoFarmActive
+        if gojoFarmActive then
+            task.spawn(function()
+                local Players = game:GetService("Players")
+                local localPlayer = Players.LocalPlayer
+                
+                while gojoFarmActive do
+                    local character = localPlayer.Character
+                    if character and character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = character.HumanoidRootPart
+                        
+                        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                            if not gojoFarmActive then break end
+                            
+                            if targetPlayer ~= localPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                local targetHRP = targetPlayer.Character.HumanoidRootPart
+                                local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+                                
+                                if targetHumanoid and targetHumanoid.Health > 0 then
+                                    pcall(function()
+                                        -- Teleport ngay lập tức sát dưới chân mục tiêu
+                                        hrp.CFrame = targetHRP.CFrame + Vector3.new(0, -3, 0)
+                                    end)
+                                    task.wait(0.2)
+                                end
+                            end
+                        end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+            print("[CPZ Hub] Đã bật Gojo 0.2s Farm dưới chân!")
+        else
+            print("[CPZ Hub] Đã tắt Gojo 0.2s Farm!")
+        end
+    end
+})
+
+Tabs.Gojo:AddButton({
+    Title = "🛡️ Chạy Bypass AC Loop (Bắt buộc trước khi Farm)",
+    Callback = function()
+        RunBypassAC()
+    end
+})
+
+-- ==========================================
+-- 2. TAB: BIOMES [1 - 5]
+-- ==========================================
+Tabs.Biomes1:AddSection("Forest, Desert, Snow, Volcano, Jungle")
+Tabs.Biomes1:AddButton({ Title = "🥚 Auto Farm - Forest", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Forest", false) end end) end })
+Tabs.Biomes1:AddButton({ Title = "🌵 Auto Farm - Desert", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Desert", false) end end) end })
+Tabs.Biomes1:AddButton({ Title = "❄️ Auto Farm - Snow", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Snow", false) end end) end })
+Tabs.Biomes1:AddButton({ Title = "🌋 Auto Farm - Volcano", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Volcano", false) end end) end })
+Tabs.Biomes1:AddButton({ Title = "🌴 Auto Farm - Jungle", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Jungle", false) end end) end })
+
+-- ==========================================
+-- 3. TAB: BIOMES [6 - 10]
+-- ==========================================
+Tabs.Biomes2:AddSection("Ocean, Swamp, Mushroom, Candy, Cyber")
+Tabs.Biomes2:AddButton({ Title = "🌊 Auto Farm - Ocean", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Ocean", false) end end) end })
+Tabs.Biomes2:AddButton({ Title = "🐸 Auto Farm - Swamp", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Swamp", false) end end) end })
+Tabs.Biomes2:AddButton({ Title = "🍄 Auto Farm - Mushroom", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Mushroom", false) end end) end })
+Tabs.Biomes2:AddButton({ Title = "🍬 Auto Farm - Candy", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Candy", false) end end) end })
+Tabs.Biomes2:AddButton({ Title = "🤖 Auto Farm - Cyber", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Cyber", false) end end) end })
+
+-- ==========================================
+-- 4. TAB: BIOMES [11 - 13]
+-- ==========================================
+Tabs.Biomes3:AddSection("Mystic, Heaven, Void")
+Tabs.Biomes3:AddButton({ Title = "✨ Auto Farm - Mystic", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Mystic", false) end end) end })
+Tabs.Biomes3:AddButton({ Title = "☁️ Auto Farm - Heaven", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Heaven", false) end end) end })
+Tabs.Biomes3:AddButton({ Title = "🌌 Auto Farm - Void", Callback = function() task.spawn(function() while task.wait(1) do AutoFarmTarget("Void", false) end end) end })
+
+-- ==========================================
+-- 5. TAB: SPECIAL & ALL BIOMES
+-- ==========================================
+Tabs.Special:AddSection("Universal Egg Farm")
+Tabs.Special:AddButton({
+    Title = "🔥 Auto Farm Cả 13 Biome (Xoay vòng)",
+    Callback = function()
+        task.spawn(function()
+            local list = {"Forest","Desert","Snow","Volcano","Jungle","Ocean","Swamp","Mushroom","Candy","Cyber","Mystic","Heaven","Void"}
+            while task.wait(0.5) do
+                for _, bName in ipairs(list) do
+                    AutoFarmTarget(bName, false)
+                end
+            end
+        end)
+    end
+})
+
+Tabs.Special:AddButton({
+    Title = "⭐ Auto Farm Trứng Đặc Biệt (Special/Event)",
+    Callback = function()
+        task.spawn(function()
+            while task.wait(1) do AutoFarmTarget("Special", true) end
+        end)
+    end
+})
+
+-- ==========================================
+-- 6. TAB: MISC & UTILITIES (Speed, Instant Interact, ESP, FE Invis)
+-- ==========================================
+Tabs.Misc:AddSection("Player Speed Control")
+
+local speedEnabled = false
+local currentSpeed = 32
+
+Tabs.Misc:AddButton({
+    Title = "⚡ Bật / Tắt WalkSpeed Safe (Tốc độ x2)",
+    Callback = function()
+        speedEnabled = not speedEnabled
+        if speedEnabled then
+            task.spawn(function()
+                local RunService = game:GetService("RunService")
+                while speedEnabled do
+                    local char = game.Players.LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                        local hum = char.Humanoid
+                        if hum.MoveDirection.Magnitude > 0 then
+                            char:TranslateBy(hum.MoveDirection * (currentSpeed / 16))
+                        end
+                    end
+                    RunService.RenderStepped:Wait()
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Misc:AddButton({ Title = "🚀 Tăng tốc độ cực nhanh (Tốc độ x3)", Callback = function() currentSpeed = 48 end })
+Tabs.Misc:AddButton({ Title = "🔄 Đưa tốc độ về Bình thường", Callback = function() currentSpeed = 16 speedEnabled = false end })
+
+Tabs.Misc:AddSection("Interaction Tools")
+Tabs.Misc:AddButton({
+    Title = "⚡ Bật Instant Interact (Không cần giữ phím E)",
+    Callback = function()
+        pcall(function()
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("ProximityPrompt") then v.HoldDuration = 0 end
+            end
+            workspace.DescendantAdded:Connect(function(v)
+                if v:IsA("ProximityPrompt") then v.HoldDuration = 0 end
+            end)
+        end)
+    end
+})
+
+Tabs.Misc:AddButton({
+    Title = "👻 Bật FE Invisible Script",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/talaben0307-jpg/FE-invis/refs/heads/main/main", true))()
+    end
+})
+
+Tabs.Misc:AddSection("Egg ESP System")
+Tabs.Misc:AddButton({
+    Title = "👁️ Bật ESP Trứng Toàn Bản Đồ (Realtime)",
+    Callback = function()
+        pcall(function()
+            local CoreGui = game:GetService("CoreGui")
+            if CoreGui:FindFirstChild("EggESPFolder") then CoreGui.EggESPFolder:Destroy() end
+
+            local ESPFolder = Instance.new("Folder")
+            ESPFolder.Name = "EggESPFolder"
+            ESPFolder.Parent = CoreGui
+
+            local function CreateHighlight(eggModel)
+                if eggModel:IsA("Model") and not eggModel:FindFirstChild("EggHighlight") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "EggHighlight"
+                    hl.Adornee = eggModel
+                    hl.FillColor = Color3.fromRGB(0, 255, 255)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.FillTransparency = 0.4
+                    hl.Parent = eggModel
+                end
+            end
+
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") and (obj.Name:lower():find("egg") or obj:FindFirstChild("TouchInterest")) then
+                    CreateHighlight(obj)
+                end
+            end
+
+            workspace.DescendantAdded:Connect(function(obj)
+                task.wait(0.1)
+                if obj:IsA("Model") and (obj.Name:lower():find("egg") or obj:FindFirstChild("TouchInterest")) then
+                    CreateHighlight(obj)
+                end
+            end)
+        end)
+    end
+})
+
+-- Mặc định chọn tab đầu tiên
+Window:SelectTab(1)
