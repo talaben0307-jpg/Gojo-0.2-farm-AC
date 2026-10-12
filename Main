@@ -1,5 +1,5 @@
 -- ==========================================
--- HỆ THỐNG BYPASS ANTI-CHEAT (Bật/Tắt linh hoạt & Thông báo)
+-- HỆ THỐNG BYPASS ANTI-CHEAT JJS (VOID TRICK & HOOK)
 -- ==========================================
 local bypassActive = false
 
@@ -13,21 +13,27 @@ local function RunBypassAC()
             local isBypassed = false
             local attempts = 0
             
-            print("[CPZ Anti-Cheat] Bắt đầu quy trình Bypass AC...")
+            print("[JJS Anti-Cheat] Bắt đầu quy trình Bypass Void & Hook...")
             
             while bypassActive and not isBypassed and attempts < 10 do
                 attempts = attempts + 1
                 local character = player.Character or player.CharacterAdded:Wait()
                 local hrp = character:WaitForChild("HumanoidRootPart")
-                local humanoid = character:WaitForChild("Humanoid")
+                local currentCFrame = hrp.CFrame
                 
-                -- Dịch chuyển tạm ra ngoài map để tránh va chạm ban đầu
+                -- Bước 1: Dịch chuyển ra vùng Void (vùng ngoài biên bản đồ / vùng chết) để đánh lừa server
                 pcall(function()
-                    hrp.CFrame = CFrame.new(0, 999999, 0)
+                    hrp.CFrame = CFrame.new(0, -500, 0)
                 end)
                 task.wait(0.4)
                 
-                -- Thử nghiệm Hook Metatable chặn Remote báo cáo
+                -- Bước 2: Kéo tạm về vị trí cũ để thực hiện hook an toàn
+                pcall(function()
+                    hrp.CFrame = currentCFrame
+                end)
+                task.wait(0.2)
+                
+                -- Bước 3: Hook Metatable chuyên sâu chặn Remote báo cáo của JJS
                 local success = pcall(function()
                     local mt = getrawmetatable(game)
                     local old = mt.__namecall
@@ -37,8 +43,8 @@ local function RunBypassAC()
                         local method = getnamecallmethod()
                         if method == "FireServer" then
                             local name = tostring(self):lower()
-                            if name:find("anticheat") or name:find("check") or name:find("teleport") or name:find("speed") then
-                                return
+                            if name:find("anticheat") or name:find("check") or name:find("teleport") or name:find("speed") or name:find("combat") then
+                                return 
                             end
                         end
                         return old(self, ...)
@@ -48,12 +54,9 @@ local function RunBypassAC()
                 
                 if success then
                     isBypassed = true
-                    bypassActive = false -- Dừng vòng lặp vì đã thành công
-                    pcall(function()
-                        hrp.CFrame = CFrame.new(0, 50, 0) -- Trả về vị trí an toàn trên map
-                    end)
+                    bypassActive = false 
                     
-                    -- Thông báo thành công trực tiếp lên màn hình game
+                    -- Thông báo thành công trực tiếp trên màn hình game
                     pcall(function()
                         local CoreGui = game:GetService("CoreGui")
                         if CoreGui:FindFirstChild("BypassNotice") then CoreGui.BypassNotice:Destroy() end
@@ -69,7 +72,7 @@ local function RunBypassAC()
                         TextLabel.Position = UDim2.new(0.5, -175, 0, 20)
                         TextLabel.Size = UDim2.new(0, 350, 0, 40)
                         TextLabel.Font = Enum.Font.GothamBold
-                        TextLabel.Text = "🚀 Bypassed Successfully! AC đã bị vô hiệu hóa."
+                        TextLabel.Text = "🚀 JJS AC Bypassed Successfully!"
                         TextLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
                         TextLabel.TextSize = 13
                         
@@ -79,11 +82,13 @@ local function RunBypassAC()
                         
                         task.delay(5, function() if ScreenGui then ScreenGui:Destroy() end end)
                     end)
-                    print("[CPZ Anti-Cheat] 🚀 Bypassed Successfully!")
+                    print("[JJS Anti-Cheat] 🚀 Bypassed Successfully!")
                 else
-                    -- Chưa được thì ép nhân vật chết để respawn thử lại
+                    -- Bước 4: Nếu chưa thành công, ép nhân vật chết (BreakJoints) để Respawn làm mới vòng đời
                     pcall(function()
-                        humanoid.Health = 0
+                        if player.Character then
+                            player.Character:BreakJoints()
+                        end
                     end)
                     player.CharacterAdded:Wait()
                     task.wait(1.5)
@@ -92,12 +97,12 @@ local function RunBypassAC()
             
             if not isBypassed and bypassActive then
                 bypassActive = false
-                print("[CPZ Anti-Cheat] ⚠️ Đã dừng hoặc quá số lần thử!")
+                print("[JJS Anti-Cheat] ⚠️ Đã dừng hoặc quá số lần thử!")
             end
         end)
-        print("[CPZ Anti-Cheat] Đã bật chế độ tự động Bypass...")
+        print("[JJS Anti-Cheat] Đang chạy vòng lặp Bypass Void & Hook...")
     else
-        print("[CPZ Anti-Cheat] Đã dừng quá trình Bypass theo yêu cầu!")
+        print("[JJS Anti-Cheat] Đã tắt quá trình Bypass!")
     end
 end
 
@@ -106,7 +111,7 @@ local CPZMenu = loadstring(game:HttpGet("https://raw.githubusercontent.com/talab
 
 -- Tạo Window Cyberpunk
 local Window = CPZMenu:CreateWindow({
-    Title = "Gojo & Bypass Hub",
+    Title = "Gojo & JJS Bypass Hub",
     SubTitle = "⚡ CPZ Edition | by Phong"
 })
 
@@ -115,6 +120,9 @@ local Tabs = {
     Gojo = Window:AddTab({ Title = "Gojo Farm & AC" })
 }
 
+-- ==========================================
+-- TÍNH NĂNG GOJO 0.2S FARM (ĐÃ ĐƯỢC THÊM LẠI)
+-- ==========================================
 Tabs.Gojo:AddSection("Gojo 0.2s Farm System")
 
 local gojoFarmActive = false
@@ -133,6 +141,7 @@ Tabs.Gojo:AddButton({
                     if character and character:FindFirstChild("HumanoidRootPart") then
                         local hrp = character.HumanoidRootPart
                         
+                        -- Duyệt qua toàn bộ người chơi trong server
                         for _, targetPlayer in ipairs(Players:GetPlayers()) do
                             if not gojoFarmActive then break end
                             
@@ -142,6 +151,7 @@ Tabs.Gojo:AddButton({
                                 
                                 if targetHumanoid and targetHumanoid.Health > 0 then
                                     pcall(function()
+                                        -- Teleport bám sát ngay dưới chân mục tiêu mỗi 0.2s
                                         hrp.CFrame = targetHRP.CFrame + Vector3.new(0, -3, 0)
                                     end)
                                     task.wait(0.2)
@@ -152,18 +162,23 @@ Tabs.Gojo:AddButton({
                     task.wait(0.1)
                 end
             end)
+            print("[CPZ Hub] Đã bật Gojo 0.2s Farm dưới chân!")
+        else
+            print("[CPZ Hub] Đã tắt Gojo 0.2s Farm!")
         end
     end
 })
 
-Tabs.Gojo:AddSection("Anti-Cheat Controls")
+-- ==========================================
+-- TÍNH NĂNG BYPASS AC
+-- ==========================================
+Tabs.Gojo:AddSection("JJS Anti-Cheat Controls")
 
 Tabs.Gojo:AddButton({
-    Title = "🛡️ Bật / Tắt AC Bypass Loop",
+    Title = "🛡️ Bật / Tắt JJS AC Bypass (Void & Hook Loop)",
     Callback = function()
         RunBypassAC()
     end
 })
 
--- Mặc định chọn tab đầu tiên
 Window:SelectTab(1)
